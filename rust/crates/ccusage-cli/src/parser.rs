@@ -333,7 +333,7 @@ fn parse_command(
             Command::Qwen,
         ),
         "agy" => {
-            parse_basic_agent_command(parser, shared, "agy", STANDARD_AGENT_REPORTS, Command::Agy)
+            parse_basic_agent_command(parser, shared, "agy", OPENCODE_AGENT_REPORTS, Command::Agy)
         }
         "openclaw" => parse_openclaw_command(parser, shared, config),
         _ => Err(format!("Unknown command '{command}'")),
@@ -935,9 +935,9 @@ fn agent_report_supported(agent: &str, report: &str) -> bool {
             "daily" | "weekly" | "monthly" | "session" | "blocks" | "statusline"
         ),
         "codex" => matches!(report, "daily" | "monthly" | "session"),
-        "opencode" => matches!(report, "daily" | "weekly" | "monthly" | "session"),
+        "opencode" | "agy" => matches!(report, "daily" | "weekly" | "monthly" | "session"),
         "amp" | "droid" | "codebuff" | "hermes" | "pi" | "goose" | "kilo" | "copilot"
-        | "gemini" | "kimi" | "qwen" | "openclaw" | "agy" => {
+        | "gemini" | "kimi" | "qwen" | "openclaw" => {
             matches!(report, "daily" | "monthly" | "session")
         }
         _ => false,

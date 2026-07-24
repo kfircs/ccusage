@@ -53,7 +53,7 @@
 			},
 			{
 				"name": "agy",
-				"description": "Show Antigravity CLI usage commands"
+				"description": "Show Antigravity CLI token usage commands"
 			},
 			{
 				"name": "droid",
@@ -333,33 +333,43 @@
 			"commands": [
 				{
 					"name": "daily",
-					"description": "Show Antigravity CLI usage grouped by date"
+					"description": "Show Antigravity CLI token usage grouped by day"
+				},
+				{
+					"name": "weekly",
+					"description": "Show Antigravity CLI token usage grouped by week"
 				},
 				{
 					"name": "monthly",
-					"description": "Show Antigravity CLI usage grouped by month"
+					"description": "Show Antigravity CLI token usage grouped by month"
 				},
 				{
 					"name": "session",
-					"description": "Show Antigravity CLI usage grouped by session"
+					"description": "Show Antigravity CLI token usage grouped by session"
 				}
 			]
 		},
 		{
 			"path": ["agy", "daily"],
-			"description": "Show Antigravity CLI usage grouped by date",
+			"description": "Show Antigravity CLI token usage grouped by day",
 			"usage": "ccusage agy daily <OPTIONS>",
 			"options": "agent_options"
 		},
 		{
+			"path": ["agy", "weekly"],
+			"description": "Show Antigravity CLI token usage grouped by week",
+			"usage": "ccusage agy weekly <OPTIONS>",
+			"options": "agent_options"
+		},
+		{
 			"path": ["agy", "monthly"],
-			"description": "Show Antigravity CLI usage grouped by month",
+			"description": "Show Antigravity CLI token usage grouped by month",
 			"usage": "ccusage agy monthly <OPTIONS>",
 			"options": "agent_options"
 		},
 		{
 			"path": ["agy", "session"],
-			"description": "Show Antigravity CLI usage grouped by session",
+			"description": "Show Antigravity CLI token usage grouped by session",
 			"usage": "ccusage agy session <OPTIONS>",
 			"options": "agent_options"
 		},
