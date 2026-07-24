@@ -710,4 +710,128 @@ mod tests {
         let cost_usage = usage_for_cost(usage, 1_000);
         assert_eq!(cost_usage.output_tokens, u64::MAX);
     }
+
+    /// Missing-pricing warning: under Calculate mode an unpriced model surfaces
+    /// `missing_pricing_model = Some(name)`; under Display mode it is suppressed
+    /// to `None`. Uses a synthetic model name that no pricing table carries so
+    /// the assertion is stable against future pricing changes.
+    #[test]
+    fn missing_pricing_warning_fires_under_calculate_and_suppressed_under_display() {
+        let pricing = PricingMap::load_embedded();
+
+        let calculate_entry = {
+            let fixture = fs_fixture!({});
+            let db_path = fixture.path("conv-missing-calc.db");
+            let db = open_db(&db_path);
+            create_schema(&db);
+            insert_gen_metadata(
+                &db,
+                0,
+                &build_gen_metadata_row(4242, "agy-unpriced-fixture-model"),
+            );
+            let payload = build_step_payload(1_767_312_000, 0, 4242, 100, 0, 500, Some("req-calc"));
+            insert_step(&db, 1, STEP_TYPE_MODEL_RESPONSE, &payload);
+            parse_conversation_db(&db_path, None, CostMode::Calculate, &pricing)
+        };
+        let display_entry = {
+            let fixture = fs_fixture!({});
+            let db_path = fixture.path("conv-missing-display.db");
+            let db = open_db(&db_path);
+            create_schema(&db);
+            insert_gen_metadata(
+                &db,
+                0,
+                &build_gen_metadata_row(4242, "agy-unpriced-fixture-model"),
+            );
+            let payload =
+                build_step_payload(1_767_312_000, 0, 4242, 100, 0, 500, Some("req-display"));
+            insert_step(&db, 1, STEP_TYPE_MODEL_RESPONSE, &payload);
+            parse_conversation_db(&db_path, None, CostMode::Display, &pricing)
+        };
+
+        assert_eq!(calculate_entry.len(), 1);
+        assert_eq!(display_entry.len(), 1);
+        assert_eq!(
+            calculate_entry[0].missing_pricing_model.as_deref(),
+            Some("agy-unpriced-fixture-model")
+        );
+        assert_eq!(display_entry[0].missing_pricing_model, None);
+    }
+
+    /// Schema-drift smoke test against the developer's real
+    /// `~/.gemini/antigravity-cli` conversations dir. Ignored by default; run
+    /// with `cargo test -p ccusage -- --ignored parses_real_local_conversation_dbs_without_panic`.
+    /// Returns early (pass) when the local dir is absent so it never fails on
+    /// machines without Antigravity data.
+    #[test]
+    #[ignore = "requires a real ~/.gemini/antigravity-cli conversations dir"]
+    fn parses_real_local_conversation_dbs_without_panic() {
+        let Some(home) = crate::home::home_dir() else {
+            return;
+        };
+        let conversations = home
+            .join(".gemini")
+            .join("antigravity-cli")
+            .join("conversations");
+        let Ok(entries) = std::fs::read_dir(&conversations) else {
+            return;
+        };
+        let pricing = PricingMap::load_embedded();
+        let tz = jiff::tz::TimeZone::UTC;
+        let mut visited = 0u32;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|ext| ext.to_str()) != Some("db") {
+                continue;
+            }
+            if path.file_name().and_then(|name| name.to_str()) == Some("conversation_summaries.db")
+            {
+                continue;
+            }
+            visited += 1;
+            let loaded = parse_conversation_db(&path, Some(&tz), CostMode::Calculate, &pricing);
+            // Must not panic; every emitted entry must carry a positive
+            // timestamp (zero/negative timestamps are filtered out).
+            assert!(
+                loaded.iter().all(|entry| entry.timestamp.as_millis() > 0),
+                "entry with non-positive timestamp from {}",
+                path.display()
+            );
+        }
+        assert!(
+            visited > 0,
+            "expected at least one .db under {}",
+            conversations.display()
+        );
+    }
+
+    /// `gpt-oss-120b-medium` is an agy variant id that LiteLLM does not list
+    /// verbatim, but it prices via the `openrouter/openai/gpt-oss-120b` alias.
+    /// Under Calculate mode the entry has a positive cost and no missing-
+    /// pricing warning, while the displayed model stays the real agy variant.
+    #[test]
+    fn gpt_oss_120b_medium_prices_via_known_alias() {
+        let fixture = fs_fixture!({});
+        let db_path = fixture.path("conv-gptoss.db");
+        let db = open_db(&db_path);
+        create_schema(&db);
+        insert_gen_metadata(&db, 0, &build_gen_metadata_row(342, "gpt-oss-120b-medium"));
+        let payload =
+            build_step_payload(1_767_312_000, 0, 342, 1_000, 0, 5_000, Some("req-gptoss"));
+        insert_step(&db, 1, STEP_TYPE_MODEL_RESPONSE, &payload);
+
+        let pricing = PricingMap::load_embedded();
+        let tz = jiff::tz::TimeZone::UTC;
+        let entries = parse_conversation_db(&db_path, Some(&tz), CostMode::Calculate, &pricing);
+
+        assert_eq!(entries.len(), 1);
+        // Displayed model is the real agy variant, not the alias.
+        assert_eq!(entries[0].model.as_deref(), Some("gpt-oss-120b-medium"));
+        // Priced via the alias, so no missing-pricing warning and cost > 0.
+        assert_eq!(entries[0].missing_pricing_model, None);
+        assert!(
+            entries[0].cost > 0.0,
+            "gpt-oss-120b-medium should price via the openrouter/openai/gpt-oss-120b alias"
+        );
+    }
 }

@@ -1,0 +1,77 @@
+---
+source: crates/ccusage/src/adapter/agy/report.rs
+expression: report
+---
+{
+  "daily": {
+    "daily": [
+      {
+        "cacheCreationTokens": 0,
+        "cacheReadTokens": 0,
+        "date": "2026-01-02",
+        "inputTokens": 22472,
+        "modelBreakdowns": [
+          {
+            "cacheCreationTokens": 0,
+            "cacheReadTokens": 0,
+            "cost": 0.0,
+            "inputTokens": 22472,
+            "modelName": "claude-sonnet-4-6",
+            "outputTokens": 997
+          }
+        ],
+        "modelsUsed": [
+          "claude-sonnet-4-6"
+        ],
+        "outputTokens": 997,
+        "totalCost": 0.0,
+        "totalTokens": 23638
+      }
+    ],
+    "totals": {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 22472,
+      "outputTokens": 997,
+      "totalCost": 0.0,
+      "totalTokens": 23638
+    }
+  },
+  "session": {
+    "sessions": [
+      {
+        "cacheCreationTokens": 0,
+        "cacheReadTokens": 0,
+        "firstActivity": "2026-01-02T00:00:00.000Z",
+        "inputTokens": 22472,
+        "lastActivity": "2026-01-02T00:01:00.000Z",
+        "modelBreakdowns": [
+          {
+            "cacheCreationTokens": 0,
+            "cacheReadTokens": 0,
+            "cost": 0.0,
+            "inputTokens": 22472,
+            "modelName": "claude-sonnet-4-6",
+            "outputTokens": 997
+          }
+        ],
+        "modelsUsed": [
+          "claude-sonnet-4-6"
+        ],
+        "outputTokens": 997,
+        "projectPath": "<fixture>/conversations/conv-snap.db",
+        "sessionId": "conv-snap",
+        "totalCost": 0.0,
+        "totalTokens": 23638
+      }
+    ],
+    "totals": {
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "inputTokens": 22472,
+      "outputTokens": 997,
+      "totalCost": 0.0,
+      "totalTokens": 23638
+    }
+  }
+}

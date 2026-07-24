@@ -200,4 +200,51 @@ mod tests {
         let totals = report.get("totals").unwrap();
         assert_eq!(totals.get("totalTokens").and_then(Value::as_u64), Some(0));
     }
+
+    /// Snapshot the daily and session report JSON shape produced from a
+    /// two-step single-conversation fixture. Captures totals, modelsUsed,
+    /// modelBreakdowns, and session metadata for regression.
+    #[test]
+    fn snapshots_daily_and_session_report_json() {
+        let fixture = fs_fixture!({});
+        let db_path = fixture.path("conversations/conv-snap.db");
+        std::fs::create_dir_all(db_path.parent().unwrap()).unwrap();
+        let db = open_db(&db_path);
+        create_schema(&db);
+        insert_gen_metadata(&db, 0, &build_gen_metadata_row(1035, "claude-sonnet-4-6"));
+        let first =
+            build_step_payload(1_767_312_000, 0, 1035, 797, 169, 22_472, Some("req-snap-1"));
+        let second = build_step_payload(1_767_312_060, 0, 1035, 200, 0, 1_000, Some("req-snap-2"));
+        insert_step(&db, 1, STEP_TYPE_MODEL_RESPONSE, &first);
+        insert_step(&db, 2, STEP_TYPE_MODEL_RESPONSE, &second);
+
+        let _cleanup = EnvVarGuard::set("AGY_DATA_DIR", fixture.root());
+        let shared = SharedArgs {
+            mode: CostMode::Display,
+            timezone: Some("UTC".to_string()),
+            ..SharedArgs::default()
+        };
+        let entries = load_entries(&shared, &PricingMap::load_embedded()).unwrap();
+        assert_eq!(entries.len(), 2);
+
+        let daily_rows = summarize_entries(&entries, AgentReportKind::Daily).unwrap();
+        let session_rows = summarize_entries(&entries, AgentReportKind::Session).unwrap();
+
+        let mut report = serde_json::json!({
+            "daily": report_from_rows(&daily_rows, AgentReportKind::Daily),
+            "session": report_from_rows(&session_rows, AgentReportKind::Session),
+        });
+        // Normalize the fixture's temp `projectPath` so the snapshot is stable
+        // across runs; the field's presence and structure are still captured.
+        if let Some(session) = report.get_mut("session").and_then(|v| v.as_object_mut())
+            && let Some(sessions) = session.get_mut("sessions").and_then(|v| v.as_array_mut())
+            && let Some(first) = sessions.first_mut().and_then(|v| v.as_object_mut())
+        {
+            first.insert(
+                "projectPath".to_string(),
+                json!("<fixture>/conversations/conv-snap.db"),
+            );
+        }
+        insta::assert_json_snapshot!(report);
+    }
 }
