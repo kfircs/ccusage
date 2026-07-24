@@ -1,16 +1,16 @@
 (defn command-args [command] (remove str/blank? (str/split command #" ")))
-(defn benchmark-command [kind bin fixture-dir codex-fixture-dir command]
+(defn benchmark-command [kind bin fixture-dir codex-fixture-dir agy-fixture-dir command]
   (let [argv (vec (concat (if (= kind :package) ["node" bin] [bin])
                           (command-args command) ["--offline" "--json"]))
-        env (benchmark-env fixture-dir codex-fixture-dir)]
+        env (benchmark-env fixture-dir codex-fixture-dir agy-fixture-dir)]
     {:argv argv :env env :text (benchmark-command-text env argv)}))
 (defn head-command [{:keys [head-runtime head-bin-entry head-native-bin-entry head-dir
-                            fixture-dir codex-fixture-dir command]}]
+                            fixture-dir codex-fixture-dir agy-fixture-dir command]}]
   (cond
-    (and (= head-runtime "package") head-bin-entry) (benchmark-command :package head-bin-entry fixture-dir codex-fixture-dir command)
-    (and (= head-runtime "rust") head-native-bin-entry) (benchmark-command :rust head-native-bin-entry fixture-dir codex-fixture-dir command)
-    (= head-runtime "rust") (benchmark-command :rust (rust-binary-entry head-dir) fixture-dir codex-fixture-dir command)
-    :else (benchmark-command :package (package-bin-entry head-dir) fixture-dir codex-fixture-dir command)))
+    (and (= head-runtime "package") head-bin-entry) (benchmark-command :package head-bin-entry fixture-dir codex-fixture-dir agy-fixture-dir command)
+    (and (= head-runtime "rust") head-native-bin-entry) (benchmark-command :rust head-native-bin-entry fixture-dir codex-fixture-dir agy-fixture-dir command)
+    (= head-runtime "rust") (benchmark-command :rust (rust-binary-entry head-dir) fixture-dir codex-fixture-dir agy-fixture-dir command)
+    :else (benchmark-command :package (package-bin-entry head-dir) fixture-dir codex-fixture-dir agy-fixture-dir command)))
 
 (defn parse-peak-rss [stderr]
   (if-let [match (re-find #"Maximum resident set size \(kbytes\):\s*(\d+)" stderr)]
@@ -61,7 +61,7 @@
 (defn compare-command [command options]
   (let [label (str (:title options) " / " command)
         _ (write-progress (str label " started"))
-        base-command (benchmark-command :package (:base-bin-entry options) (:fixture-dir options) (:codex-fixture-dir options) command)
+        base-command (benchmark-command :package (:base-bin-entry options) (:fixture-dir options) (:codex-fixture-dir options) (:agy-fixture-dir options) command)
         head-command* (head-command (assoc options :command command))
         [base head] (run-hyperfine [base-command head-command*] ["base" "PR"] (:runs options) (:warmup options) label)
         base-memory (measure-memory base-command {:runs (:memory-runs options) :label (str label " base")})
@@ -73,6 +73,8 @@
   (write-progress (str (:title options) " started"))
   (let [section {:codex-fixture-dir (:codex-fixture-dir options)
                  :codex-fixture-stats (when (:codex-fixture-dir options) (summarize-directory (:codex-fixture-dir options)))
+                 :agy-fixture-dir (:agy-fixture-dir options)
+                 :agy-fixture-stats (when (:agy-fixture-dir options) (summarize-directory (:agy-fixture-dir options)))
                  :description (:description options) :fixture-dir (:fixture-dir options)
                  :fixture-stats (summarize-directory (:fixture-dir options))
                  :memory-runs (:memory-runs options)
@@ -92,7 +94,7 @@
                      (fn [command]
                        (let [label (str (:title options) " / runtime diagnostics (" command ")")
                              _ (write-progress (str label " started"))
-                             commands (mapv #(benchmark-command (:kind %) (:bin %) (:fixture-dir options) (:codex-fixture-dir options) command) variants)
+                             commands (mapv #(benchmark-command (:kind %) (:bin %) (:fixture-dir options) (:codex-fixture-dir options) (:agy-fixture-dir options) command) variants)
                              measurements (run-hyperfine commands (mapv :label variants) (:runs options) (:warmup options) label)]
                          (write-progress (str label " done: " (str/join ", " (map #(str (:label %1) " " (format-duration (:median %2))) variants measurements))))
                          (mapv (fn [variant measurement] {:command command :label (:label variant) :measurement measurement}) variants measurements)))

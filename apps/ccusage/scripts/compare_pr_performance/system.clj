@@ -128,7 +128,8 @@
 (defn summarize-directory [directory]
   (let [files (filter fs/regular-file? (file-seq (fs/file directory)))]
     {:bytes (reduce + 0 (map fs/size files)) :files (count files)}))
-(defn benchmark-env [fixture-dir codex-fixture-dir]
+(defn benchmark-env [fixture-dir codex-fixture-dir agy-fixture-dir]
   (cond-> (array-map "CLAUDE_CONFIG_DIR" fixture-dir "COLUMNS" "200" "LOG_LEVEL" "0"
                      "NO_COLOR" "1" "TZ" "UTC")
-    codex-fixture-dir (assoc "CODEX_HOME" codex-fixture-dir)))
+    codex-fixture-dir (assoc "CODEX_HOME" codex-fixture-dir)
+    agy-fixture-dir (assoc "AGY_DATA_DIR" agy-fixture-dir)))

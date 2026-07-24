@@ -12,6 +12,7 @@
    :head-runtime {:default "package" :ref "package|rust"}
    :fixture-dir {:ref "DIR"}
    :codex-fixture-dir {:ref "DIR"}
+   :agy-fixture-dir {:ref "DIR"}
    :output {:ref "FILE"}
    :runs {:coerce :long :default 7 :ref "N"}
    :warmup {:coerce :long :default 2 :ref "N"}

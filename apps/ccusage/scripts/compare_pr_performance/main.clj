@@ -18,6 +18,7 @@
         (merge options
                {:base-dir base-dir :head-dir head-dir :fixture-dir (expand (:fixture-dir options))
                 :codex-fixture-dir (expand (:codex-fixture-dir options))
+                :agy-fixture-dir (some-> (:agy-fixture-dir options) expand)
                 :large-fixture-dir (some-> (:large-fixture-dir options) expand)
                 :large-codex-fixture-dir (some-> (:large-codex-fixture-dir options) expand)
                 :base-package-install base-install :head-package-install head-install
@@ -32,8 +33,9 @@
   (let [common (select-keys context [:base-bin-entry :base-runtime-description :base-sha :head-bin-entry :head-dir
                                      :head-native-bin-entry :head-runtime :head-runtime-description :head-sha :memory-runs])
         committed (compare-fixture (merge common {:fixture-dir (:fixture-dir context) :codex-fixture-dir (:codex-fixture-dir context)
-                                                   :commands ["claude daily" "claude session" "codex daily" "codex session"]
-                                                   :description "Committed small fixtures for stable PR-to-PR feedback and explicit Claude/Codex command coverage."
+                                                   :agy-fixture-dir (:agy-fixture-dir context)
+                                                   :commands ["claude daily" "claude session" "codex daily" "codex session" "agy daily" "agy session"]
+                                                   :description "Committed small fixtures for stable PR-to-PR feedback and explicit Claude/Codex/Agy command coverage."
                                                    :title "Committed fixture performance" :runs (:runs context) :warmup (:warmup context)}))
         large (when (:large-fixture-dir context)
                 (compare-fixture (merge common {:fixture-dir (:large-fixture-dir context)

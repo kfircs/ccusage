@@ -5,8 +5,10 @@
          (catch Exception _ fixture-dir))))
 (defn format-fixture-stats [stats] (format "%s, %d files" (format-data-size (:bytes stats)) (:files stats)))
 (defn fixture-stats-for-command [section command]
-  (if (and (str/starts-with? command "codex") (:codex-fixture-stats section))
-    (:codex-fixture-stats section) (:fixture-stats section)))
+  (cond
+    (and (str/starts-with? command "codex") (:codex-fixture-stats section)) (:codex-fixture-stats section)
+    (and (str/starts-with? command "agy") (:agy-fixture-stats section)) (:agy-fixture-stats section)
+    :else (:fixture-stats section)))
 (defn escape-cell [value] (-> (str value) (str/replace "|" "\\|") (str/replace "\n" "<br>")))
 (defn escape-header [value] (str/replace (escape-cell value) "/" "&#x2f;"))
 (defn table-md [rows]
@@ -16,13 +18,16 @@
          (str/join "\n" (map #(str "| " (str/join " | " (row-values %)) " |") rows)))))
 
 (defn fixture-line [section options]
-  (if-not (:codex-fixture-dir section)
-    (format "Fixture: `%s` (%s)" (format-fixture-path (:head-dir options) (:fixture-dir section))
-            (format-fixture-stats (:fixture-stats section)))
-    (format "Fixtures: Claude `%s` (%s), Codex `%s` (%s)"
-            (format-fixture-path (:head-dir options) (:fixture-dir section)) (format-fixture-stats (:fixture-stats section))
-            (format-fixture-path (:head-dir options) (:codex-fixture-dir section))
-            (format-fixture-stats (or (:codex-fixture-stats section) (:fixture-stats section))))))
+  (let [claude-path (format-fixture-path (:head-dir options) (:fixture-dir section))
+        claude-stats (format-fixture-stats (:fixture-stats section))
+        codex-path (when (:codex-fixture-dir section) (format-fixture-path (:head-dir options) (:codex-fixture-dir section)))
+        codex-stats (when (:codex-fixture-dir section) (format-fixture-stats (or (:codex-fixture-stats section) (:fixture-stats section))))
+        agy-path (when (:agy-fixture-dir section) (format-fixture-path (:head-dir options) (:agy-fixture-dir section)))
+        agy-stats (when (:agy-fixture-dir section) (format-fixture-stats (or (:agy-fixture-stats section) (:fixture-stats section))))]
+    (cond
+      (and codex-path agy-path) (format "Fixtures: Claude `%s` (%s), Codex `%s` (%s), Agy `%s` (%s)" claude-path claude-stats codex-path codex-stats agy-path agy-stats)
+      codex-path (format "Fixtures: Claude `%s` (%s), Codex `%s` (%s)" claude-path claude-stats codex-path codex-stats)
+      :else (format "Fixture: `%s` (%s)" claude-path claude-stats))))
 (defn render-fixture-section [section options]
   (let [has-memory (some #(or (:base-memory %) (:head-memory %)) (:results section))
         base-desc (or (:base-runtime-description options) "Base runs the package `ccusage` bin from `apps/ccusage/package.json` with Node")
