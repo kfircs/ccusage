@@ -13,6 +13,7 @@ pub(super) use super::parser::{
     FIELD_F5_TIMESTAMP_SUBMESSAGE, FIELD_F5_USAGE_SUBMESSAGE, FIELD_F9_CUMULATIVE_INPUT,
     FIELD_F9_MODEL_ENUM, FIELD_F9_OUTPUT_TOKENS, FIELD_F9_REQUEST_ID, FIELD_F9_THINKING_TOKENS,
     FIELD_GEN_METADATA_ENUM, FIELD_GEN_METADATA_INNER, FIELD_GEN_METADATA_MODEL_NAME,
+    FIELD_GEN_METADATA_NEW_ENUM, FIELD_GEN_METADATA_NEW_MODEL_NAME, FIELD_GEN_METADATA_NEW_OUTER,
     FIELD_OUTER_EVENT_SUBMESSAGE, FIELD_TS_NANOS, FIELD_TS_SECONDS, STEP_TYPE_MODEL_RESPONSE,
 };
 
@@ -90,7 +91,7 @@ pub(super) fn build_step_payload(
 
 pub(super) fn build_gen_metadata_row(enum_id: u64, model_name: &str) -> Vec<u8> {
     // The model identity lives in the f1 sub-message: f3 = enum id,
-    // f19 = model name string (mirrors the real Antigravity layout).
+    // f19 = model name string (mirrors older Antigravity rows).
     let mut inner = Vec::new();
     inner.extend_from_slice(&encode_varint_field(FIELD_GEN_METADATA_ENUM, enum_id));
     inner.extend_from_slice(&encode_string_field(
@@ -98,6 +99,18 @@ pub(super) fn build_gen_metadata_row(enum_id: u64, model_name: &str) -> Vec<u8> 
         model_name,
     ));
     encode_submessage_field(FIELD_GEN_METADATA_INNER, &inner)
+}
+
+pub(super) fn build_gen_metadata_row_new_layout(enum_id: u64, model_name: &str) -> Vec<u8> {
+    // Newer Antigravity rows store the model identity in a top-level f3
+    // sub-message: f1 = enum id, f28 = model name string.
+    let mut inner = Vec::new();
+    inner.extend_from_slice(&encode_varint_field(FIELD_GEN_METADATA_NEW_ENUM, enum_id));
+    inner.extend_from_slice(&encode_string_field(
+        FIELD_GEN_METADATA_NEW_MODEL_NAME,
+        model_name,
+    ));
+    encode_submessage_field(FIELD_GEN_METADATA_NEW_OUTER, &inner)
 }
 
 pub(super) fn open_db(path: &Path) -> sqlite::Connection {

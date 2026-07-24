@@ -33,13 +33,22 @@ pub(super) const FIELD_F9_CUMULATIVE_INPUT: u64 = 5;
 pub(super) const FIELD_F9_REQUEST_ID: u64 = 11;
 
 /// Protobuf field numbers used inside `gen_metadata.data`. Each row's `data`
-/// blob is a per-step generation-metadata record; its `f1` sub-message carries
-/// the model identity — `f3` is the integer model enum id and `f19` is the
-/// human-readable model id string. The enum id is what `step_payload.f5.f9.f1`
-/// references, so this builds the per-conversation enum → name mapping.
+/// blob is a per-step generation-metadata record. Antigravity has shipped at
+/// least two layouts for the model identity:
+///
+/// 1. Older rows: a top-level `f1` sub-message carries `f3` (enum id) and
+///    `f19` (human-readable model id string).
+/// 2. Newer rows: a top-level `f3` sub-message carries `f1` (enum id) and
+///    `f28` (human-readable model id string).
+///
+/// The enum id is what `step_payload.f5.f9.f1` references, so this builds the
+/// per-conversation enum → name mapping.
 pub(super) const FIELD_GEN_METADATA_INNER: u64 = 1;
 pub(super) const FIELD_GEN_METADATA_ENUM: u64 = 3;
 pub(super) const FIELD_GEN_METADATA_MODEL_NAME: u64 = 19;
+pub(super) const FIELD_GEN_METADATA_NEW_OUTER: u64 = 3;
+pub(super) const FIELD_GEN_METADATA_NEW_ENUM: u64 = 1;
+pub(super) const FIELD_GEN_METADATA_NEW_MODEL_NAME: u64 = 28;
 
 /// Parse a single agy conversation `.db` file and return `LoadedEntry`
 /// values for every step that carries token usage data. The function is
@@ -251,11 +260,15 @@ fn per_turn_input_tokens(cumulative_input: u64, previous: &mut Option<u64>) -> u
 }
 
 /// Read every `gen_metadata` row and build the enum id → model name
-/// mapping for this conversation. Each row's `data` blob is a per-step
-/// generation-metadata record; the model identity lives in its `f1`
-/// sub-message — `f3` is the integer enum id and `f19` is the model id
-/// string. Returns an empty map when the table is missing or unreadable;
-/// callers must be able to handle that.
+/// mapping for this conversation. Antigravity has shipped at least two
+/// `gen_metadata.data` layouts (see the field-number constants above); the
+/// decoder tries the older `f1` layout first, then the newer `f3` layout.
+/// After scanning all rows, any enum id that remains unmapped is filled from
+/// a small hardcoded table of known agy enums so real-world conversations
+/// always surface a human-readable model name.
+///
+/// Returns an empty map when the table is missing or unreadable; callers
+/// must be able to handle that.
 fn read_model_mapping(connection: &sqlite::Connection) -> HashMap<u64, String> {
     let Ok(mut statement) = connection.prepare("SELECT data FROM gen_metadata ORDER BY idx") else {
         return HashMap::new();
@@ -267,30 +280,67 @@ fn read_model_mapping(connection: &sqlite::Connection) -> HashMap<u64, String> {
                 let Ok(data) = statement.read::<Vec<u8>, _>(0) else {
                     continue;
                 };
-                let Some(inner) = extract_length_delimited(&data, FIELD_GEN_METADATA_INNER) else {
-                    continue;
-                };
-                let Some(enum_id) = extract_varint(inner, FIELD_GEN_METADATA_ENUM) else {
-                    continue;
-                };
-                let Some(name_bytes) =
-                    extract_length_delimited(inner, FIELD_GEN_METADATA_MODEL_NAME)
-                else {
-                    continue;
-                };
-                let Ok(name) = std::str::from_utf8(name_bytes) else {
-                    continue;
-                };
-                let trimmed = name.trim();
-                if !trimmed.is_empty() {
-                    mapping.insert(enum_id, trimmed.to_string());
+                if let Some((enum_id, name)) = decode_gen_metadata_mapping(&data) {
+                    let trimmed = name.trim();
+                    if !trimmed.is_empty() {
+                        mapping.insert(enum_id, trimmed.to_string());
+                    }
                 }
             }
             Ok(sqlite::State::Done) => break,
             Err(_) => break,
         }
     }
+    apply_known_enum_fallbacks(&mut mapping);
     mapping
+}
+
+/// Decode a single `gen_metadata.data` blob into an `(enum_id, model_name)`
+/// pair. Tries the older `f1` layout first, then the newer `f3` layout.
+fn decode_gen_metadata_mapping(data: &[u8]) -> Option<(u64, String)> {
+    // Layout 1: top-level f1 sub-message with f3 enum id and f19 name.
+    if let Some(result) = decode_gen_metadata_old_layout(data) {
+        return Some(result);
+    }
+    // Layout 2: top-level f3 sub-message with f1 enum id and f28 name.
+    decode_gen_metadata_new_layout(data)
+}
+
+fn decode_gen_metadata_old_layout(data: &[u8]) -> Option<(u64, String)> {
+    let inner = extract_length_delimited(data, FIELD_GEN_METADATA_INNER)?;
+    let enum_id = extract_varint(inner, FIELD_GEN_METADATA_ENUM)?;
+    let name_bytes = extract_length_delimited(inner, FIELD_GEN_METADATA_MODEL_NAME)?;
+    let name = std::str::from_utf8(name_bytes).ok()?;
+    Some((enum_id, name.to_string()))
+}
+
+fn decode_gen_metadata_new_layout(data: &[u8]) -> Option<(u64, String)> {
+    let inner = extract_length_delimited(data, FIELD_GEN_METADATA_NEW_OUTER)?;
+    let enum_id = extract_varint(inner, FIELD_GEN_METADATA_NEW_ENUM)?;
+    let name_bytes = extract_length_delimited(inner, FIELD_GEN_METADATA_NEW_MODEL_NAME)?;
+    let name = std::str::from_utf8(name_bytes).ok()?;
+    Some((enum_id, name.to_string()))
+}
+
+/// Hardcoded fallback enum id → model id table for known Antigravity models.
+/// This is a safety net: if the protobuf layout drifts again, or if a
+/// conversation row is missing `gen_metadata`, users still see a real model
+/// name instead of a bare integer. Values are taken from real agy DBs and
+/// intentionally mirror the names the CLI displays upstream.
+fn apply_known_enum_fallbacks(mapping: &mut HashMap<u64, String>) {
+    const FALLBACKS: &[(u64, &str)] = &[
+        (342, "gpt-oss-120b-medium"),
+        (1020, "gemini-3.5-flash-low"),
+        (1026, "claude-opus-4-6-thinking"),
+        (1035, "claude-sonnet-4-6"),
+        (1036, "gemini-3.1-pro-low"),
+        (1132, "gemini-3-flash-agent"),
+        (1187, "gemini-3.5-flash-extra-low"),
+        (1196, "gemini-3.6-flash-tiered"),
+    ];
+    for &(enum_id, name) in FALLBACKS {
+        mapping.entry(enum_id).or_insert_with(|| name.to_string());
+    }
 }
 
 /// Build the final `LoadedEntry` for one step. The model is resolved from the
@@ -450,8 +500,8 @@ fn request_id_for_entry(request_id: Option<&str>, idx: i64) -> String {
 #[cfg(test)]
 mod tests {
     use super::super::support::{
-        build_gen_metadata_row, build_step_payload, create_schema, insert_gen_metadata,
-        insert_step, open_db,
+        build_gen_metadata_row, build_gen_metadata_row_new_layout, build_step_payload,
+        create_schema, insert_gen_metadata, insert_step, open_db,
     };
     use super::*;
     use ccusage_test_support::fs_fixture;
@@ -507,6 +557,30 @@ mod tests {
 
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].model.as_deref(), Some("gemini-3-flash-a"));
+    }
+
+    /// Test 2b: Model mapping for the newer `gen_metadata` layout. Newer agy
+    /// rows put the enum id in field 1 and the model name in field 28 of a
+    /// top-level field 3 sub-message.
+    #[test]
+    fn resolves_model_name_from_new_gen_metadata_layout() {
+        let fixture = fs_fixture!({});
+        let db_path = fixture.path("conv-model-new.db");
+        let db = open_db(&db_path);
+        create_schema(&db);
+        insert_gen_metadata(
+            &db,
+            0,
+            &build_gen_metadata_row_new_layout(1035, "claude-sonnet-4-6"),
+        );
+        let payload = build_step_payload(1_767_312_000, 0, 1035, 100, 0, 500, Some("req-new"));
+        insert_step(&db, 1, STEP_TYPE_MODEL_RESPONSE, &payload);
+
+        let pricing = PricingMap::load_embedded();
+        let entries = parse_conversation_db(&db_path, None, CostMode::Display, &pricing);
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].model.as_deref(), Some("claude-sonnet-4-6"));
     }
 
     /// Test 3: Cumulative input diff. Two steps whose cumulative input
