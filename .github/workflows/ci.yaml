@@ -502,6 +502,7 @@ jobs:
             ${{ matrix.head-runtime-arg }} \
             --fixture-dir apps/ccusage/test/fixtures/claude \
             --codex-fixture-dir apps/ccusage/test/fixtures/codex \
+            --agy-fixture-dir apps/ccusage/test/fixtures/agy \
             --warmup 2 \
             --runs 7 \
             --large-fixture-dir "$RUNNER_TEMP/ccusage-large-fixture" \
