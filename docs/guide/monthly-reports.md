@@ -8,6 +8,7 @@ Monthly usage aggregates coding (agent) CLI usage by calendar month, providing a
 ccusage monthly
 ccusage codex monthly
 ccusage amp monthly
+ccusage agy monthly
 ccusage pi monthly
 ccusage qwen monthly
 ```

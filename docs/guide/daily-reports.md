@@ -17,6 +17,7 @@ ccusage
 ccusage codex daily
 ccusage opencode daily
 ccusage amp daily
+ccusage agy daily
 ccusage pi daily
 ccusage qwen daily
 ```

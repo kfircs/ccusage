@@ -9,6 +9,7 @@ ccusage session
 ccusage codex session
 ccusage opencode session
 ccusage amp session
+ccusage agy session
 ccusage pi session
 ccusage qwen session
 ```

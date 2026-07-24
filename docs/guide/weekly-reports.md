@@ -10,6 +10,7 @@ Show all weekly usage:
 ccusage weekly
 ccusage claude weekly
 ccusage opencode weekly
+ccusage agy weekly
 ```
 
 ## Example Output

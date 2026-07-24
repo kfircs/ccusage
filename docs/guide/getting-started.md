@@ -48,6 +48,7 @@ ccusage claude daily
 ccusage codex daily
 ccusage opencode weekly
 ccusage amp session
+ccusage agy daily
 ccusage pi monthly
 ccusage kilo daily
 ccusage kimi daily

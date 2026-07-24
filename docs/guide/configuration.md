@@ -53,6 +53,7 @@ export CODEX_HOME="$HOME/.codex"
 export GEMINI_DATA_DIR="$HOME/.gemini/tmp"
 export OPENCODE_DATA_DIR="$HOME/.local/share/opencode"
 export AMP_DATA_DIR="$HOME/.local/share/amp"
+export AGY_DATA_DIR="$HOME/.gemini/antigravity-cli"
 export PI_AGENT_DIR="$HOME/.pi/agent/sessions"
 export KILO_DATA_DIR="$HOME/.local/share/kilo"
 export COPILOT_OTEL_FILE_EXPORTER_PATH="$HOME/.copilot/otel/copilot-otel.jsonl"
@@ -109,7 +110,7 @@ For individual developers working on multiple projects:
 
 ### Multiple Sources
 
-Configure Claude Code, Codex, OpenCode, Amp, Droid, Codebuff, Hermes Agent, pi-agent, Goose, OpenClaw, Kilo, Kimi, Qwen, GitHub Copilot CLI, and Gemini CLI separately with data source namespaces:
+Configure Claude Code, Codex, OpenCode, Amp, Agy (Antigravity CLI), Droid, Codebuff, Hermes Agent, pi-agent, Goose, OpenClaw, Kilo, Kimi, Qwen, GitHub Copilot CLI, and Gemini CLI separately with data source namespaces:
 
 ```json
 // ~/.config/claude/ccusage.json

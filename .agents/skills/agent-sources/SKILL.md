@@ -20,6 +20,7 @@ ccusage daily
 ccusage codex daily
 ccusage opencode daily
 ccusage amp daily
+ccusage agy daily
 ccusage pi daily
 ```
 
@@ -44,6 +45,7 @@ flags:
 - OpenCode: `rust/crates/ccusage/src/adapter/opencode/README.md`
 - Amp: `rust/crates/ccusage/src/adapter/amp/README.md`
 - pi-agent: `rust/crates/ccusage/src/adapter/pi/README.md`
+- Antigravity CLI (agy): `rust/crates/ccusage/src/adapter/agy/README.md`
 
 ## Implementation Notes
 
