@@ -332,6 +332,9 @@ fn parse_command(
             STANDARD_AGENT_REPORTS,
             Command::Qwen,
         ),
+        "agy" => {
+            parse_basic_agent_command(parser, shared, "agy", STANDARD_AGENT_REPORTS, Command::Agy)
+        }
         "openclaw" => parse_openclaw_command(parser, shared, config),
         _ => Err(format!("Unknown command '{command}'")),
     }
@@ -762,6 +765,7 @@ fn is_command(arg: &str) -> bool {
             | "gemini"
             | "kimi"
             | "qwen"
+            | "agy"
     )
 }
 
@@ -920,6 +924,7 @@ fn is_agent_command(command: &str) -> bool {
             | "kimi"
             | "qwen"
             | "openclaw"
+            | "agy"
     )
 }
 
@@ -932,7 +937,7 @@ fn agent_report_supported(agent: &str, report: &str) -> bool {
         "codex" => matches!(report, "daily" | "monthly" | "session"),
         "opencode" => matches!(report, "daily" | "weekly" | "monthly" | "session"),
         "amp" | "droid" | "codebuff" | "hermes" | "pi" | "goose" | "kilo" | "copilot"
-        | "gemini" | "kimi" | "qwen" | "openclaw" => {
+        | "gemini" | "kimi" | "qwen" | "openclaw" | "agy" => {
             matches!(report, "daily" | "monthly" | "session")
         }
         _ => false,
@@ -956,6 +961,7 @@ fn agent_display_name(agent: &str) -> &'static str {
         "kimi" => "Kimi",
         "qwen" => "Qwen",
         "openclaw" => "OpenClaw",
+        "agy" => "Antigravity CLI",
         _ => unreachable!("agent is prevalidated"),
     }
 }

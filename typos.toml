@@ -8,6 +8,8 @@ extend-ignore-re = [
 ]
 
 [default.extend-words]
+agy = "agy"
+antigravity = "antigravity"
 color = "color"
 sade = "sade"
 

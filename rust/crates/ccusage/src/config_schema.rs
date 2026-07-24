@@ -28,6 +28,8 @@ pub(crate) struct CcusageConfig {
     pub(crate) opencode: Option<OpenCodeConfig>,
     /// Amp configuration.
     pub(crate) amp: Option<AmpConfig>,
+    /// agy configuration.
+    pub(crate) agy: Option<AgyConfig>,
     /// Droid configuration.
     pub(crate) droid: Option<DroidConfig>,
     /// Codebuff configuration.
@@ -122,6 +124,21 @@ pub(crate) struct AmpConfig {
 #[derive(Debug, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct AmpCommandsConfig {
+    pub(crate) daily: Option<SharedOptions>,
+    pub(crate) monthly: Option<SharedOptions>,
+    pub(crate) session: Option<SharedOptions>,
+}
+
+#[derive(Debug, Default, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct AgyConfig {
+    pub(crate) defaults: Option<SharedOptions>,
+    pub(crate) commands: Option<AgyCommandsConfig>,
+}
+
+#[derive(Debug, Default, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct AgyCommandsConfig {
     pub(crate) daily: Option<SharedOptions>,
     pub(crate) monthly: Option<SharedOptions>,
     pub(crate) session: Option<SharedOptions>,
@@ -1126,9 +1143,9 @@ mod tests {
             &schema,
             "ccusage-config",
             &[
-                "$schema", "amp", "claude", "codebuff", "codex", "commands", "copilot", "defaults",
-                "gemini", "goose", "hermes", "kilo", "kimi", "opencode", "openclaw", "pi", "qwen",
-                "droid",
+                "$schema", "agy", "amp", "claude", "codebuff", "codex", "commands", "copilot",
+                "defaults", "gemini", "goose", "hermes", "kilo", "kimi", "opencode", "openclaw",
+                "pi", "qwen", "droid",
             ],
         );
         assert!(

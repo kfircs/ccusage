@@ -202,6 +202,7 @@ fn command_snapshot(command: Option<Command>) -> Value {
         Some(Command::Kimi(args)) => agent_command_snapshot("kimi", args),
         Some(Command::Qwen(args)) => agent_command_snapshot("qwen", args),
         Some(Command::OpenClaw(args)) => agent_command_snapshot("openclaw", args),
+        Some(Command::Agy(args)) => agent_command_snapshot("agy", args),
     }
 }
 
@@ -514,7 +515,7 @@ fn root_help_lists_agent_namespaces_without_nested_commands() {
     let help = help_text();
     let agents = [
         "claude", "codex", "opencode", "amp", "droid", "codebuff", "hermes", "pi", "goose", "kilo",
-        "copilot", "gemini", "kimi", "qwen", "openclaw",
+        "copilot", "gemini", "kimi", "qwen", "openclaw", "agy",
     ];
 
     for agent in agents {
@@ -1091,4 +1092,14 @@ fn parses_openclaw_session_options() {
     assert_eq!(args.kind, AgentReportKind::Session);
     assert!(args.shared.json);
     assert_eq!(args.open_claw_path.as_deref(), Some("/tmp/openclaw"));
+}
+
+#[test]
+fn parses_agy_session_options() {
+    let cli = parse(&["ccusage", "agy", "session", "--json"]);
+    let Some(Command::Agy(args)) = cli.command else {
+        panic!("expected agy command");
+    };
+    assert_eq!(args.kind, AgentReportKind::Session);
+    assert!(args.shared.json);
 }

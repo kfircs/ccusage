@@ -3,6 +3,7 @@ use std::{
     thread,
 };
 
+pub(crate) mod agy;
 pub(crate) mod all;
 pub(crate) mod amp;
 pub(crate) mod claude;

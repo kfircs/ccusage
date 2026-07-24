@@ -52,6 +52,10 @@
 				"description": "Show Amp token usage commands"
 			},
 			{
+				"name": "agy",
+				"description": "Show Antigravity CLI usage commands"
+			},
+			{
 				"name": "droid",
 				"description": "Show Droid usage commands"
 			},
@@ -320,6 +324,43 @@
 			"path": ["amp", "session"],
 			"description": "Show Amp token usage grouped by session",
 			"usage": "ccusage amp session <OPTIONS>",
+			"options": "agent_options"
+		},
+		{
+			"path": ["agy"],
+			"description": "Usage reports for agy.",
+			"usage": "ccusage agy <COMMANDS>",
+			"commands": [
+				{
+					"name": "daily",
+					"description": "Show Antigravity CLI usage grouped by date"
+				},
+				{
+					"name": "monthly",
+					"description": "Show Antigravity CLI usage grouped by month"
+				},
+				{
+					"name": "session",
+					"description": "Show Antigravity CLI usage grouped by session"
+				}
+			]
+		},
+		{
+			"path": ["agy", "daily"],
+			"description": "Show Antigravity CLI usage grouped by date",
+			"usage": "ccusage agy daily <OPTIONS>",
+			"options": "agent_options"
+		},
+		{
+			"path": ["agy", "monthly"],
+			"description": "Show Antigravity CLI usage grouped by month",
+			"usage": "ccusage agy monthly <OPTIONS>",
+			"options": "agent_options"
+		},
+		{
+			"path": ["agy", "session"],
+			"description": "Show Antigravity CLI usage grouped by session",
+			"usage": "ccusage agy session <OPTIONS>",
 			"options": "agent_options"
 		},
 		{
