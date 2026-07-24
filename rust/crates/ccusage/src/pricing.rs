@@ -1390,6 +1390,15 @@ fn model_without_date_suffix(model: &str) -> &str {
 fn pricing_alias(model: &str) -> Option<&'static str> {
     match model {
         "gpt-5.3-spark" => Some("gpt-5.3-codex-spark"),
+        // Antigravity CLI (agy) emits variant model ids that LiteLLM does not
+        // list verbatim. Map them to the known base/endpoint names that do
+        // appear in LiteLLM so pricing resolves. The displayed model name stays
+        // the agy variant; only the pricing lookup is redirected.
+        "gpt-oss-120b-medium" => Some("openrouter/openai/gpt-oss-120b"),
+        "gemini-3-flash-a" => Some("gemini-3-flash"),
+        "gemini-default" => Some("gemini-3-flash"),
+        "gemini-3.1-pro-low" => Some("gemini-3.1-pro"),
+        "gemini-3.6-flash-tiered" => Some("gemini-3.6-flash"),
         _ => None,
     }
 }
@@ -1488,6 +1497,7 @@ mod tests {
     use super::{
         BUILD_TIME_MODELS_DEV_JSON, BUILD_TIME_PRICING_JSON, Pricing, PricingMap,
         embedded_models_dev_pricing, long_context_split_threshold, model_without_date_suffix,
+        pricing_alias,
     };
     use ccusage_test_support::fs_fixture;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -2177,6 +2187,26 @@ mod tests {
             pricing.find("gpt-5.5").unwrap().input
         );
         assert_eq!(pricing.context_limit("private-gpt-55"), Some(1_050_000));
+    }
+
+    #[test]
+    fn pricing_alias_maps_agy_variants_to_known_names() {
+        // gpt-oss-120b-medium prices today via the OpenRouter endpoint name.
+        assert_eq!(
+            pricing_alias("gpt-oss-120b-medium"),
+            Some("openrouter/openai/gpt-oss-120b")
+        );
+        // gemini variants collapse to the base names LiteLLM is expected to
+        // carry; they stay unpriced until LiteLLM adds those base names.
+        assert_eq!(pricing_alias("gemini-3-flash-a"), Some("gemini-3-flash"));
+        assert_eq!(pricing_alias("gemini-default"), Some("gemini-3-flash"));
+        assert_eq!(pricing_alias("gemini-3.1-pro-low"), Some("gemini-3.1-pro"));
+        assert_eq!(
+            pricing_alias("gemini-3.6-flash-tiered"),
+            Some("gemini-3.6-flash")
+        );
+        // Models outside the agy variant set are not aliased here.
+        assert_eq!(pricing_alias("claude-sonnet-4-6"), None);
     }
 
     #[test]
