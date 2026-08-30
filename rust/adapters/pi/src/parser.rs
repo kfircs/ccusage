@@ -211,7 +211,15 @@ fn read_session_file_with_context(
         let model = raw_model
             .as_ref()
             .map(|model| format!("[{}] {model}", context.store_name()));
-        let display_cost = usage_value.cost.as_ref().and_then(|cost| cost.total);
+        // Some pi providers (notably the local Ollama family) have no cost
+        // concept and emit `usage.cost.total = 0` on every message. Treat a
+        // zero display cost as missing so Auto mode can fall through to the
+        // user-configured pricingOverrides.
+        let display_cost = usage_value
+            .cost
+            .as_ref()
+            .and_then(|cost| cost.total)
+            .filter(|&total| total > 0.0);
         let cost = context.cost(
             raw_model.as_deref(),
             model.as_deref(),
@@ -630,5 +638,39 @@ mod tests {
         .unwrap();
 
         assert_ne!(entry_id(&pi), entry_id_for_store("omp", &omp));
+    }
+
+    #[test]
+    fn auto_mode_falls_through_zero_display_cost_to_pricing_override() {
+        // Regression: pi sessions routed through providers that have no
+        // cost concept (e.g. local Ollama) emit `usage.cost.total = 0`
+        // on every message. ccusage's Auto mode treats any Some(0.0)
+        // display cost as authoritative, so the user's pricingOverrides
+        // entry for `[pi] gemma4:26b-mlx` is never consulted and the
+        // reported cost is $0.00 even when an override exists.
+        let fixture = fs_fixture!({
+            "sessions/project-a/agent_session-a.jsonl": r#"{"type":"message","timestamp":"2026-01-02T00:00:00.000Z","message":{"role":"assistant","model":"gemma4:26b-mlx","usage":{"input":1000000,"output":1000000,"cost":{"total":0}}}}"#,
+        });
+        let file = fixture.path("sessions/project-a/agent_session-a.jsonl");
+
+        let mut pricing = PricingMap::default();
+        pricing.load_json(
+            r#"{
+                "[pi] gemma4:26b-mlx": {
+                    "input_cost_per_token": 0.000000085,
+                    "output_cost_per_token": 0.0000012
+                }
+            }"#,
+        );
+
+        let entries = read_session_file(&file, None, CostMode::Auto, Some(&pricing)).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        // 1_000_000 * 0.000000085 + 1_000_000 * 0.0000012 = 1.285
+        assert!(
+            (entries[0].cost - 1.285).abs() < 1e-9,
+            "expected override to be applied, got cost={}",
+            entries[0].cost
+        );
     }
 }
